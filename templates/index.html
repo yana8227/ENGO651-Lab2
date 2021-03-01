@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Calgary Building Permit Search</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+                integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+                crossorigin=""/>
+        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+                integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+                crossorigin=""></script>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap-responsive.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.js"></script>
+        
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.0.6/dist/MarkerCluster.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.0.6/dist/MarkerCluster.Default.css">
+        <script src="https://unpkg.com/leaflet.markercluster@1.0.6/dist/leaflet.markercluster-src.js"></script>
+        <style>
+            #mapid {position: absolute; top: 130px; bottom: 0; left: 0; right: 0; z-index:0} 
+            .datepicker-dropdown {
+                z-index:1
+            }
+            
+            span.tab-space {padding-right:0.5em;}
+            span.large-space {padding-right:5em;}
+        </style>
+    </head>
+    <body>
+        <h3 class="display-6 py-3 text-center">Calgary Building Permit Search</h3>
+        
+        <nav class='navbar navbar-expand bg-dark navbar-dark  justify-content-center'> 
+            <form autocomplete="off" class="form-inline" action="/" method="POST">
+                <div class="input-group input-daterange">
+                <input  id="start" name="start" class="form-control mr-2" placeholder="Start Date" type="text"/><span class="fa fa-calendar" id="fa-1"></span>
+                <input id="end"  name="end" class="form-control ml-2" placeholder="End Date" type="text"/> <span class="fa fa-calendar" id="fa-2"></span>
+                <span class="tab-space"></span>
+                <button class="btn btn-success" type="submit">Search</button>
+                <span class="large-space"></span>
+
+                {% if start==null or end==null %}
+                <h5 style="color:white" class="my-auto">Please make a search</h5>
+                {% elif start==end %}
+                <h5 style="color:white" class="my-auto">Building permits issued on {{start}}:</h5>
+                {% else %}
+                <h5 style="color:white" class="my-auto">Building permits issued from {{start}} to {{end}}:</h5>
+                {% endif %}
+            </div>
+            </form>
+        </nav>
+
+        <div id="mapid"></div>
+        <script type="text/javascript">
+            var mymap = L.map('mapid').setView([51.055, -114.060], 10);
+
+            L.tileLayer('https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=64BIP6y8QMOAnAKw4Q2I', {
+                attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
+            }).addTo(mymap);
+            
+            $(document).ready(function(){
+            $('.input-daterange').datepicker({
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+            calendarWeeks : true,
+            clearBtn: true,
+            disableTouchKeyboard: true
+            });
+            });
+
+
+            if ('{{url}}'){
+                fetch('{{url}}')
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    var markers = L.markerClusterGroup();
+                    L.geoJSON(data, {
+                        onEachFeature: function(feature, layer){
+                        content = "Issued date: " + feature.properties.issueddate + "<br>Workclass group: " + feature.properties.workclassgroup +
+                                  "<br>Contractor name: " + feature.properties.contractorname + "<br>Community name : " + feature.properties.communityname +
+                                  "<br>Original address: " + feature.properties.originaladdress; 
+                        layer.bindPopup(content);
+                        }
+                    }).addTo(markers);
+                    markers.addTo(mymap);
+                    mymap.fitBounds(markers.getBounds());
+                });
+            }
+
+        </script>
+    </body>
+</html>
